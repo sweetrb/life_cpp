@@ -6,9 +6,7 @@
 // global settings that control behavior (screen size, speed, etc)
 static int maxX=-1;
 static int maxY=-1;
-static const int starting_density=30;	// percent of cells initialized to alive
-static const int generations=80;
-static const long delay=100000; 		// amount of time in microseconds to sleep between generations
+int starting_density=50;	// percent of cells initialized to alive
 
 // global constants and variables that should not be modified.
 static const int dead=0;
@@ -16,12 +14,13 @@ static const int live=1;
 
 static WINDOW * mainwin;
 
-// function declarations
+// FUNCTION DECLARATIONS
+
 int main(int, char**);
 void start(void);
 void quit(int);
 
-// class declarations
+// CLASS DECLARATIONS
 
 // Class to hold the matrix of cells for a single generation
 class Earth {

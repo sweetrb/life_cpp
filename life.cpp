@@ -16,6 +16,7 @@
 // debugging flags
 #define DEBUG 0
 
+
 /*******************************************************************************
  *	main()
  *		very little is done in the main itself, just initialize, 
@@ -24,6 +25,8 @@
  */
 int main (int argc, char **argv) {
 	start();
+
+	starting_density=75;// set inital population density of the starting section
 
 	srand(time(NULL)); 	// seed random number generator with current time 
 	Life l;				// create the life object, which holds both worlds
@@ -95,7 +98,7 @@ void Earth::randomize() {
 				(x<(maxX/2)+3) && 
 				(y>(maxY/2)-3) && 
 				(y<(maxY/2)+3) && 
-				(rand()*100 < starting_density)) {
+				(int(rand() % 101) <= starting_density)) {
 				set(x,y,live);		
 			} else {
 				set(x,y,dead);		
@@ -213,6 +216,7 @@ void Life::run() {
 
 // iterate through the today Earth, updating the corresponding cell in tomorrow
 void Life::generate() {
+	int count=0;	// total count of all living cells in the current generation
 	for (int y=0; y<maxY ; y++) {
 		for (int x=0; x<maxX ; x++) {
 			int state = dead;
@@ -223,7 +227,12 @@ void Life::generate() {
 				state = live;
 			} 
 			tomorrow->set(x,y,state);
+			count += state;
 		}
+	}
+	// if there are no living cells then start over
+	if (! count) {
+		tomorrow->randomize();
 	}
 }
 
