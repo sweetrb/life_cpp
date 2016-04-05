@@ -4,15 +4,15 @@
 #include <ncurses.h>
 
 // debugging flags
-//#define DEBUG 1
+#define DEBUG 0
 static const int gDrawNeighbors=0;
 
 // global settings that control behavior (screen size, speed, etc)
 static int maxX=-1;
 static int maxY=-1;
-static const int starting_density=5;
+static const int starting_density=30;	// percent of cells initialized to alive
 static const int generations=80;
-static const long delay=100000; 	// amount of time in microseconds to sleep between generations
+static const long delay=100000; 		// amount of time in microseconds to sleep between generations
 
 // global constants and variables that should not be modified.
 static const int dead=0;
@@ -53,16 +53,24 @@ public:
 	}
 
 	~Earth() {
-		delete cell;
+		delete[] cell;
 		printf("Earth %d destroyed\n", n);
 	}
 
+	// initialize cells.   Set all to dead except for a section in the middle of the screen which 
+	// are randomly either dead or live
 	void randomize() {
-		// initialize cells randomly
-		for (int y=0; y<maxY ; y++) 
-			for (int x=0; x<maxX ; x++) {
-				int state = (rand() % starting_density) ? dead : live;	
-				set(x,y,state);		
+		for (int y=0 ; y<maxY ; y++) 
+			for (int x=0 ; x<maxX ; x++) {
+				if ((x>(maxX/2)-3) && 
+					(x<(maxX/2)+3) && 
+					(y>(maxY/2)-3) && 
+					(y<(maxY/2)+3) && 
+				    (rand()*100 < starting_density)) {
+					set(x,y,live);		
+				} else {
+					set(x,y,dead);		
+				}
 			}
 	}
 
