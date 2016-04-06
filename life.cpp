@@ -124,6 +124,7 @@ int Earth::set(int x, int y, int state) {
 	}
 #endif
 	cell[x + y*maxX] = state;
+    return state;
 }
 
 // count how many neighbors a cell has, including edge wrap
