@@ -5,6 +5,8 @@
  *
  * Curses is used for terminal IO and the system was developed on a Raspberry pi 2
  * with Raspian OS
+ *
+ * R. Sweet	2015
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -198,10 +200,14 @@ void Life::run() {
 		today->draw();
 		generate();
 
+		// swap today and tomorrow.
+		// really what's happening is tomorrow becomes today, and then we reuse 
+		// the no longer needed old today as a new tomorrow
 		Earth *tmp = tomorrow;
 		tomorrow = today;
 		today = tmp;
 
+		// check to see if the user hit a key
 		char c=getch();
 		switch (c) {
 			case 'q': 
