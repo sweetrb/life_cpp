@@ -13,10 +13,11 @@
 #include <time.h>
 #include <ncurses.h>
 
-#include "life.h"
-
 // debugging flags
-#define DEBUG 0
+#define NDEBUG			// comment this out to enable assertions
+#include <assert.h>
+
+#include "life.h"
 
 
 /*******************************************************************************
@@ -28,11 +29,11 @@
 int main (int argc, char **argv) {
 	start();
 
-	starting_density=75;// set inital population density of the starting section
+	starting_density=75;	// set initial population density of the starting section
 
 	srand(time(NULL)); 	// seed random number generator with current time 
-	Life l;				// create the life object, which holds both worlds
-	l.run();			// run the world
+	Life l;					// create the life object, which holds both worlds
+	l.run();				// run the world
 
 	quit(0);
 }
@@ -77,12 +78,7 @@ void quit(int code) {
 
 // constructor for Earth
 Earth::Earth() {
-#ifdef DEBUG
-	if ((maxX < 1 || maxX > 300) || (maxY < 1 || maxY > 300)) {
-		fprintf(stderr,"Screen parameters out of bounds: maxX = %d maxY = %d\n", maxX, maxY);
-		quit(1);
-	}
-#endif
+	assert((maxX >= 1 && maxX <= 300) && (maxY >= 1 && maxY < 300));
 	cell = new int[maxX * maxY];
 	randomize();
 }
@@ -100,8 +96,8 @@ void Earth::randomize() {
 				(x<(maxX/2)+3) && 
 				(y>(maxY/2)-3) && 
 				(y<(maxY/2)+3) && 
-				(int(rand() % 101) <= starting_density)) {
-				set(x,y,live);		
+				(int(rand() % 100) <= starting_density)) {
+					set(x,y,live);		
 			} else {
 				set(x,y,dead);		
 			}
@@ -109,34 +105,19 @@ void Earth::randomize() {
 }
 
 int Earth::get(int x, int y) {
-#ifdef DEBUG
-	if ((x<0 || x>=maxX) || (y<0 || y>=maxY)) {
-		fprintf(stderr, "Value out of bounds in Earth::get(%d, %d)\n", x, y);
-		quit(1);
-	}
-#endif
+	assert ((x>=0 && x<maxX) && (y>=0 && y<maxY));
 	return cell[x + y*maxX];
 }
 
 int Earth::set(int x, int y, int state) {
-#ifdef DEBUG
-	if ((x<0 || x>=maxX) || (y<0 || y>=maxY)) {
-		fprintf(stderr, "Value out of bounds in Earth::set(%d, %d, %d)\n", x, y, state);
-		quit(1);
-	}
-#endif
+	assert ((x>=0 && x<maxX) && (y>=0 && y<maxY));
 	cell[x + y*maxX] = state;
     return state;
 }
 
 // count how many neighbors a cell has, including edge wrap
 int Earth::neighbors(int x, int y) {
-#ifdef DEBUG
-	if ((x<0 || x>=maxX) || (y<0 || y>=maxY)) {
-		fprintf(stderr, "Value out of bounds in Earth::neighbors(%d, %d)\n", x, y);
-		quit(1);
-	}
-#endif
+	assert ((x>=0 && x<maxX) && (y>=0 && y<maxY));
 	int u = y==maxY-1 ? 0 : y+1;
 	int d = y ? y-1 : maxY-1;
 	int l = x ? x-1 : maxX-1;
@@ -145,17 +126,8 @@ int Earth::neighbors(int x, int y) {
 				get(l,y) +            get(r,y) +
 				get(l,d) + get(x,d) + get(r,d);
 
-#ifdef DEBUG
-	if (count < 0 || count > 8) {
-		fprintf(stderr,"cell(%d,%d) has invalid number of neighbors: %d\n",x,y,count);
-		fprintf(stderr,"u=%d\n",u);
-		fprintf(stderr,"d=%d\n",d);
-		fprintf(stderr,"l=%d\n",l);
-		fprintf(stderr,"r=%d\n",r);
-		quit(1);
-	}
+	assert(count >= 0 && count <= 8);
 
-#endif
 	return count;
 }
 
@@ -210,10 +182,10 @@ void Life::run() {
 		// check to see if the user hit a key
 		char c=getch();
 		switch (c) {
-			case 'q': 
+			case 'q': 		// quit
 				done=true;
 				break;
-			case 'r':
+			case 'r':		// restart & randomize
 				today->randomize();
 				break;
 		}
