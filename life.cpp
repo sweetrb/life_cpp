@@ -27,7 +27,7 @@
  *		shut down clean.
  */
 int main (int argc, char **argv) {
-	start();
+	initialize();			// do all the ncurses setup
 
 	starting_density=75;	// set initial population density of the starting section
 
@@ -42,7 +42,7 @@ int main (int argc, char **argv) {
  * start()
  * 		do the basic initialization for ncurses and etc
  */
-void start(void) {
+void initialize(void) {
     /*  Initialize ncurses  */
 	if ( (mainwin = initscr()) == NULL ) {
 		fprintf(stderr, "Error initialising ncurses.\n");

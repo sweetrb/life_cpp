@@ -17,7 +17,7 @@ static WINDOW * mainwin;
 // FUNCTION DECLARATIONS
 
 int main(int, char**);
-void start(void);
+void initialize(void);
 void quit(int);
 
 // CLASS DECLARATIONS
