@@ -190,7 +190,6 @@ void Life::run() {
 				break;
 		}
 	}
-
 }
 
 // iterate through the today Earth, updating the corresponding cell in tomorrow
