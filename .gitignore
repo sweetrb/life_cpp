@@ -7,3 +7,10 @@ life
 
 # Debug files
 *.dSYM/
+
+# Editor files
+*.swp
+*~
+
+# OS files
+.DS_Store
