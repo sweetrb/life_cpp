@@ -1,0 +1,9 @@
+# Compiled binary
+life
+
+# Object files
+*.o
+*.obj
+
+# Debug files
+*.dSYM/
