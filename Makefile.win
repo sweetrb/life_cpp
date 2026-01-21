@@ -1,0 +1,21 @@
+# Windows Makefile for 'life' using MSYS2
+
+TARGET = life.exe
+
+C = life.cpp
+
+# Use MSYS2 MinGW64 compiler
+COMP = /c/msys64/mingw64/bin/g++
+
+# Include and library paths for ncurses
+INCLUDES = -I/c/msys64/mingw64/include/ncurses
+LIBS = -L/c/msys64/mingw64/lib -lncursesw
+
+all:
+	$(COMP) $(INCLUDES) -o $(TARGET) $(C) $(LIBS)
+
+clean:
+	rm -f $(TARGET) *.out
+
+run: all
+	./$(TARGET)

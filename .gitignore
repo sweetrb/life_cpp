@@ -1,16 +1,47 @@
-# Compiled binary
+# Compiled binaries
 life
+life.exe
+
+# Windows DLLs
+*.dll
 
 # Object files
 *.o
 *.obj
 
+# Library files
+*.a
+*.lib
+*.so
+*.dylib
+
 # Debug files
 *.dSYM/
+*.pdb
+
+# Dependency files
+*.d
+
+# Build artifacts
+*.out
+*.app
 
 # Editor files
 *.swp
 *~
+.vscode/
+.vs/
+.idea/
 
 # OS files
 .DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Core dumps
+core
+core.*
