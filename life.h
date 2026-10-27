@@ -6,7 +6,7 @@
 // global settings that control behavior (screen size, speed, etc)
 static int maxX=-1;
 static int maxY=-1;
-int starting_density=50;	// percent of cells initialized to alive
+int starting_density=30;	// percent of cells initialized to alive
 int restart_after=0;		// generations between automatic restarts, 0 = never
 
 // global constants and variables that should not be modified.

@@ -32,8 +32,6 @@ int main (int argc, char **argv) {
 
 	initialize();			// do all the ncurses setup
 
-	starting_density=75;	// set initial population density of the starting section
-
 	srand(time(NULL)); 	// seed random number generator with current time 
 	Life l;					// create the life object, which holds both worlds
 	l.run();				// run the world
@@ -131,17 +129,11 @@ Earth::~Earth() {
 // initialize cells.   Set all to dead except for a section in the middle of the screen which 
 // are randomly either dead or live
 void Earth::randomize() {
+	// seed the whole board, not a patch at its centre, so that every
+	// implementation of Life starts from the same shape of population
 	for (int y=0 ; y<maxY ; y++) 
 		for (int x=0 ; x<maxX ; x++) {
-			if ((x>(maxX/2)-3) && 
-				(x<(maxX/2)+3) && 
-				(y>(maxY/2)-3) && 
-				(y<(maxY/2)+3) && 
-				(int(rand() % 100) <= starting_density)) {
-					set(x,y,live);		
-			} else {
-				set(x,y,dead);		
-			}
+			set(x, y, (int(rand() % 100) < starting_density) ? live : dead);
 		}
 }
 
