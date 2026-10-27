@@ -8,6 +8,12 @@ static int maxX=-1;
 static int maxY=-1;
 int starting_density=30;	// percent of cells initialized to alive
 int restart_after=0;		// generations between automatic restarts, 0 = never
+bool show_generations=false;	// put the generation count in the pane title
+bool show_time=false;		// put the time per generation in the pane title
+
+// how often the pane title is refreshed, in milliseconds.  Rewriting it every
+// generation would cost more than the game does.
+static const long title_interval_ms=100;
 
 // global constants and variables that should not be modified.
 static const int dead=0;
@@ -20,6 +26,7 @@ static WINDOW * mainwin;
 int main(int, char**);
 void parse_args(int, char**);
 void usage(const char *);
+void set_title(long generations, double us_per_gen);
 void initialize(void);
 void quit(int);
 

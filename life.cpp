@@ -13,6 +13,7 @@
 #include <string.h>
 #include <time.h>
 #include <ncurses.h>
+#include <chrono>
 
 // debugging flags
 #define NDEBUG			// comment this out to enable assertions
@@ -43,9 +44,31 @@ int main (int argc, char **argv) {
  * usage()
  */
 void usage(const char *prog) {
-	fprintf(stderr, "Usage: %s [-r | --restart <generations>]\n", prog);
+	fprintf(stderr, "Usage: %s [-r | --restart <generations>] [-g | --generations] [-t | --time]\n", prog);
 	fprintf(stderr, "  -r, --restart <generations>  restart with a new random pattern\n");
 	fprintf(stderr, "                               every <generations> generations (0 = never)\n");
+	fprintf(stderr, "  -g, --generations            show the generation count in the pane title\n");
+	fprintf(stderr, "  -t, --time                   show the time per generation in the pane title\n");
+}
+
+/*******************************************************************************
+ * set_title()
+ * 		set the terminal's (or iTerm pane's) title.  OSC 1 leaves the cursor
+ * 		and attributes alone, so it is safe to write around curses.
+ */
+void set_title(long generations, double us_per_gen) {
+	char buf[128];
+	int n = snprintf(buf, sizeof buf, "C++");
+
+	if (show_generations) {
+		n += snprintf(buf+n, sizeof buf - n, " | gen %ld", generations);
+	}
+	if (show_time && us_per_gen > 0.0) {
+		snprintf(buf+n, sizeof buf - n, " | %.1f us/gen", us_per_gen);
+	}
+
+	printf("\033]1;%s\007", buf);
+	fflush(stdout);
 }
 
 /*******************************************************************************
@@ -69,6 +92,10 @@ void parse_args(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 			restart_after = (int)n;
+		} else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--generations") == 0) {
+			show_generations = true;
+		} else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
+			show_time = true;
 		} else {
 			fprintf(stderr, "%s: unknown option '%s'\n", argv[0], argv[i]);
 			usage(argv[0]);
@@ -202,8 +229,18 @@ Life::~Life() {
 // 4. repeat back to 1
 void Life::run() {
 	bool done = false;
-	int gen = 0;		// generations since the last (re)start
+	int gen = 0;			// generations since the last (re)start
+	long generations = 0;	// generations since the program started
+	bool titled = show_generations || show_time;
+
+	// the title is refreshed on a timer, and the rate is measured over the
+	// generations that fell inside the last interval
+	std::chrono::steady_clock::time_point sampled = std::chrono::steady_clock::now();
+	long sampled_at = 0;
+	double us_per_gen = 0.0;
+
 	while(!done) {
+		generations++;
 		// 'tomorrow' still holds the generation that is on the screen, so it
 		// is what today has to be compared against
 		today->draw(tomorrow);
@@ -220,6 +257,20 @@ void Life::run() {
 		if (restart_after && ++gen >= restart_after) {
 			today->randomize();
 			gen = 0;
+		}
+
+		// refresh the pane title, at most every title_interval_ms
+		if (titled) {
+			std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+			long elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(now - sampled).count();
+			if (elapsed_us >= title_interval_ms * 1000) {
+				if (generations > sampled_at) {
+					us_per_gen = (double)elapsed_us / (generations - sampled_at);
+				}
+				set_title(generations, us_per_gen);
+				sampled = now;
+				sampled_at = generations;
+			}
 		}
 
 		// check to see if the user hit a key
