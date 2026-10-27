@@ -4,6 +4,11 @@ TARGET = life
 
 C = life.cpp
 
+# Without this the build is -O0, which nearly halves the generation rate and
+# makes any timing comparison against the other implementations meaningless.
+# (NDEBUG is already defined at the top of life.cpp, so the asserts are out.)
+CFLAGS = -O2
+
 # Windows/MSYS2 detection using shell command
 UNAME := $(shell uname -s)
 ifneq (,$(findstring MINGW,$(UNAME)))
@@ -32,7 +37,7 @@ else
 endif
 
 all:
-	$(COMP) $(INCLUDES) -o $(TARGET) $(C) $(LIBS)
+	$(COMP) $(CFLAGS) $(INCLUDES) -o $(TARGET) $(C) $(LIBS)
 ifneq (,$(findstring MINGW,$(UNAME)))
 	@cp -f /c/msys64/mingw64/bin/libncursesw6.dll . 2>/dev/null || true
 else ifneq (,$(findstring MSYS,$(UNAME)))

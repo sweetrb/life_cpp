@@ -137,7 +137,7 @@ void Earth::randomize() {
 		}
 }
 
-int Earth::get(int x, int y) {
+int Earth::get(int x, int y) const {
 	assert ((x>=0 && x<maxX) && (y>=0 && y<maxY));
 	return cell[x + y*maxX];
 }
@@ -164,14 +164,15 @@ int Earth::neighbors(int x, int y) {
 	return count;
 }
 
-// draw the grid of the cells
-void Earth::draw() {
-	// draw the cells
+// draw the grid of the cells, touching only the ones that changed state since
+// the generation currently on the screen
+void Earth::draw(const Earth *shown) {
 	for (int y=0; y<maxY ; y++) {
-		move(y,0);
 		for (int x=0; x<maxX ; x++) {
-			char c = get(x,y) ? 'O' : ' ';
-			addch(c);
+			int state = get(x,y);
+			if (state != shown->get(x,y)) {
+				mvaddch(y, x, state ? 'O' : ' ');
+			}
 		}
 	}
 	refresh();
@@ -203,7 +204,9 @@ void Life::run() {
 	bool done = false;
 	int gen = 0;		// generations since the last (re)start
 	while(!done) {
-		today->draw();
+		// 'tomorrow' still holds the generation that is on the screen, so it
+		// is what today has to be compared against
+		today->draw(tomorrow);
 		generate();
 
 		// swap today and tomorrow.

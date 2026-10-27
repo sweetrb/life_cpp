@@ -33,10 +33,10 @@ public:
 	Earth() ;
 	~Earth() ;
 	void randomize() ;
-	int get(int x, int y) ;
+	int get(int x, int y) const ;
 	int set(int x, int y, int state) ;
 	int neighbors(int x, int y) ;
-	void draw() ;
+	void draw(const Earth *shown) ;
 };
 
 // Class to impliment the game.  Contains two generations, today and tomorrow and impliments the rules
