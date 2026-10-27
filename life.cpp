@@ -10,8 +10,10 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <ncurses.h>
+#include <chrono>
 
 // debugging flags
 #define NDEBUG			// comment this out to enable assertions
@@ -27,15 +29,79 @@
  *		shut down clean.
  */
 int main (int argc, char **argv) {
-	initialize();			// do all the ncurses setup
+	parse_args(argc, argv);	// before initialize() so usage errors reach the terminal
 
-	starting_density=75;	// set initial population density of the starting section
+	initialize();			// do all the ncurses setup
 
 	srand(time(NULL)); 	// seed random number generator with current time 
 	Life l;					// create the life object, which holds both worlds
 	l.run();				// run the world
 
 	quit(0);
+}
+
+/*******************************************************************************
+ * usage()
+ */
+void usage(const char *prog) {
+	fprintf(stderr, "Usage: %s [-r | --restart <generations>] [-g | --generations] [-t | --time]\n", prog);
+	fprintf(stderr, "  -r, --restart <generations>  restart with a new random pattern\n");
+	fprintf(stderr, "                               every <generations> generations (0 = never)\n");
+	fprintf(stderr, "  -g, --generations            show the generation count in the pane title\n");
+	fprintf(stderr, "  -t, --time                   show the time per generation in the pane title\n");
+}
+
+/*******************************************************************************
+ * set_title()
+ * 		set the terminal's (or iTerm pane's) title.  OSC 1 leaves the cursor
+ * 		and attributes alone, so it is safe to write around curses.
+ */
+void set_title(long generations, double us_per_gen) {
+	char buf[128];
+	int n = snprintf(buf, sizeof buf, "C++");
+
+	if (show_generations) {
+		n += snprintf(buf+n, sizeof buf - n, " | gen %ld", generations);
+	}
+	if (show_time && us_per_gen > 0.0) {
+		snprintf(buf+n, sizeof buf - n, " | %.1f us/gen", us_per_gen);
+	}
+
+	printf("\033]1;%s\007", buf);
+	fflush(stdout);
+}
+
+/*******************************************************************************
+ * parse_args()
+ * 		command line options.  Called before ncurses is initialized so that
+ * 		anything written to stderr is still visible.
+ */
+void parse_args(int argc, char **argv) {
+	for (int i=1; i<argc; i++) {
+		if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--restart") == 0) {
+			if (++i >= argc) {
+				fprintf(stderr, "%s: %s requires a generation count\n", argv[0], argv[i-1]);
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			char *end;
+			long n = strtol(argv[i], &end, 10);
+			if (*end != '\0' || n < 0) {
+				fprintf(stderr, "%s: invalid generation count '%s'\n", argv[0], argv[i]);
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			restart_after = (int)n;
+		} else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--generations") == 0) {
+			show_generations = true;
+		} else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
+			show_time = true;
+		} else {
+			fprintf(stderr, "%s: unknown option '%s'\n", argv[0], argv[i]);
+			usage(argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
 }
 
 /*******************************************************************************
@@ -90,21 +156,15 @@ Earth::~Earth() {
 // initialize cells.   Set all to dead except for a section in the middle of the screen which 
 // are randomly either dead or live
 void Earth::randomize() {
+	// seed the whole board, not a patch at its centre, so that every
+	// implementation of Life starts from the same shape of population
 	for (int y=0 ; y<maxY ; y++) 
 		for (int x=0 ; x<maxX ; x++) {
-			if ((x>(maxX/2)-3) && 
-				(x<(maxX/2)+3) && 
-				(y>(maxY/2)-3) && 
-				(y<(maxY/2)+3) && 
-				(int(rand() % 100) <= starting_density)) {
-					set(x,y,live);		
-			} else {
-				set(x,y,dead);		
-			}
+			set(x, y, (int(rand() % 100) < starting_density) ? live : dead);
 		}
 }
 
-int Earth::get(int x, int y) {
+int Earth::get(int x, int y) const {
 	assert ((x>=0 && x<maxX) && (y>=0 && y<maxY));
 	return cell[x + y*maxX];
 }
@@ -131,14 +191,15 @@ int Earth::neighbors(int x, int y) {
 	return count;
 }
 
-// draw the grid of the cells
-void Earth::draw() {
-	// draw the cells
+// draw the grid of the cells, touching only the ones that changed state since
+// the generation currently on the screen
+void Earth::draw(const Earth *shown) {
 	for (int y=0; y<maxY ; y++) {
-		move(y,0);
 		for (int x=0; x<maxX ; x++) {
-			char c = get(x,y) ? 'O' : ' ';
-			addch(c);
+			int state = get(x,y);
+			if (state != shown->get(x,y)) {
+				mvaddch(y, x, state ? 'O' : ' ');
+			}
 		}
 	}
 	refresh();
@@ -168,8 +229,21 @@ Life::~Life() {
 // 4. repeat back to 1
 void Life::run() {
 	bool done = false;
+	int gen = 0;			// generations since the last (re)start
+	long generations = 0;	// generations since the program started
+	bool titled = show_generations || show_time;
+
+	// the title is refreshed on a timer, and the rate is measured over the
+	// generations that fell inside the last interval
+	std::chrono::steady_clock::time_point sampled = std::chrono::steady_clock::now();
+	long sampled_at = 0;
+	double us_per_gen = 0.0;
+
 	while(!done) {
-		today->draw();
+		generations++;
+		// 'tomorrow' still holds the generation that is on the screen, so it
+		// is what today has to be compared against
+		today->draw(tomorrow);
 		generate();
 
 		// swap today and tomorrow.
@@ -178,6 +252,26 @@ void Life::run() {
 		Earth *tmp = tomorrow;
 		tomorrow = today;
 		today = tmp;
+
+		// automatic restart, the same effect as the user hitting 'r'
+		if (restart_after && ++gen >= restart_after) {
+			today->randomize();
+			gen = 0;
+		}
+
+		// refresh the pane title, at most every title_interval_ms
+		if (titled) {
+			std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+			long elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(now - sampled).count();
+			if (elapsed_us >= title_interval_ms * 1000) {
+				if (generations > sampled_at) {
+					us_per_gen = (double)elapsed_us / (generations - sampled_at);
+				}
+				set_title(generations, us_per_gen);
+				sampled = now;
+				sampled_at = generations;
+			}
+		}
 
 		// check to see if the user hit a key
 		char c=getch();
