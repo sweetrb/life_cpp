@@ -10,6 +10,7 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <ncurses.h>
 
@@ -27,6 +28,8 @@
  *		shut down clean.
  */
 int main (int argc, char **argv) {
+	parse_args(argc, argv);	// before initialize() so usage errors reach the terminal
+
 	initialize();			// do all the ncurses setup
 
 	starting_density=75;	// set initial population density of the starting section
@@ -36,6 +39,44 @@ int main (int argc, char **argv) {
 	l.run();				// run the world
 
 	quit(0);
+}
+
+/*******************************************************************************
+ * usage()
+ */
+void usage(const char *prog) {
+	fprintf(stderr, "Usage: %s [-r | --restart <generations>]\n", prog);
+	fprintf(stderr, "  -r, --restart <generations>  restart with a new random pattern\n");
+	fprintf(stderr, "                               every <generations> generations (0 = never)\n");
+}
+
+/*******************************************************************************
+ * parse_args()
+ * 		command line options.  Called before ncurses is initialized so that
+ * 		anything written to stderr is still visible.
+ */
+void parse_args(int argc, char **argv) {
+	for (int i=1; i<argc; i++) {
+		if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--restart") == 0) {
+			if (++i >= argc) {
+				fprintf(stderr, "%s: %s requires a generation count\n", argv[0], argv[i-1]);
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			char *end;
+			long n = strtol(argv[i], &end, 10);
+			if (*end != '\0' || n < 0) {
+				fprintf(stderr, "%s: invalid generation count '%s'\n", argv[0], argv[i]);
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			restart_after = (int)n;
+		} else {
+			fprintf(stderr, "%s: unknown option '%s'\n", argv[0], argv[i]);
+			usage(argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
 }
 
 /*******************************************************************************
@@ -168,6 +209,7 @@ Life::~Life() {
 // 4. repeat back to 1
 void Life::run() {
 	bool done = false;
+	int gen = 0;		// generations since the last (re)start
 	while(!done) {
 		today->draw();
 		generate();
@@ -178,6 +220,12 @@ void Life::run() {
 		Earth *tmp = tomorrow;
 		tomorrow = today;
 		today = tmp;
+
+		// automatic restart, the same effect as the user hitting 'r'
+		if (restart_after && ++gen >= restart_after) {
+			today->randomize();
+			gen = 0;
+		}
 
 		// check to see if the user hit a key
 		char c=getch();

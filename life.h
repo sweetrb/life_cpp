@@ -7,6 +7,7 @@
 static int maxX=-1;
 static int maxY=-1;
 int starting_density=50;	// percent of cells initialized to alive
+int restart_after=0;		// generations between automatic restarts, 0 = never
 
 // global constants and variables that should not be modified.
 static const int dead=0;
@@ -17,6 +18,8 @@ static WINDOW * mainwin;
 // FUNCTION DECLARATIONS
 
 int main(int, char**);
+void parse_args(int, char**);
+void usage(const char *);
 void initialize(void);
 void quit(int);
 
